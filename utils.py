@@ -41,8 +41,10 @@ def add_logger(f):
         sentinel = object()
         logger_o = globs.get('logger',sentinel)
         globs['logger'] = logging.getLogger(f.__module__).getChild(f.__qualname__)
+        globs['logger'].debug("begin")
         try:
             result = f(*args, **kwargs)
+            globs['logger'].debug("result: " + str(result))
         finally:
             if logger_o is sentinel:
                 del globs['logger']
