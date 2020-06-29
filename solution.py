@@ -8,7 +8,7 @@ import re
 from utils import get_logger, add_logger
 logger = get_logger(__name__)
 
-logger.setLevel(logging.DEBUG)
+# logger.setLevel(logging.DEBUG)
 
 
 class Token(object):
@@ -338,13 +338,10 @@ def simplify(substitutions,expr):
     logger.debug('subst_expr: ' + str(subst_expr))
     # Repeat substitutions until there is only one variable left in the
     # expression
-    while True:
+    for i in subst_expr:
         for var in subst_expr:
             expr = expr.replace(var,'(' + subst_expr[var] + ')')
             logger.debug('expr: ' + expr)
-        var_counter = Counter(re.findall('[a-zA-Z]',expr))
-        if len(var_counter) <= 1:
-            break
     parser = Parser()
     expr_tree = parser.parse(expr)
     logger.debug('expr_tree: {}'.format(expr_tree))
