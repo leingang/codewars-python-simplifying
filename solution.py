@@ -23,7 +23,7 @@ class Token(object):
 
     def __str__(self):
         return "{cls}({name},{value})".format(cls=self.__class__.__name__,
-                                            name= self.name,
+                                            name=self.name,
                                             value=repr(self.value))
                                         
 
@@ -69,8 +69,10 @@ class Lexer(object):
             else:
                 yield Token(tokname, tokvalue)
         if pos != len(text):
-            raise TokenizerException('tokenizer stopped at pos %r of %r' % (
-                pos, len(text)))        
+            raise TokenizerException('Tokenizer stopped at pos {pos}/{len} in {text}'\
+                    .format(text=text,len=len(text),pos=pos))
+        else:
+            yield Token('EOF',None)
 
 
 # Parsing
@@ -124,6 +126,7 @@ class BinOp(AbstractSyntaxTree):
                 name=self.op.name,
                 left=self.left,
                 right=self.right)
+
 
 class ScalarMult(AbstractSyntaxTree):
     """AST node for scalar multiplication"""
@@ -188,10 +191,7 @@ class Parser(object):
         """
         if self.current_token.name == token_type:
             logger.debug("eating {}".format(token_type))
-            try:
-                self.current_token = next(self.tokens)
-            except StopIteration:
-                self.current_token = Token('EOF',None)
+            self.current_token = next(self.tokens)
             logger.debug("self.current_token: {}".format(self.current_token))
         else:
             raise SyntaxError("Expected token of type '{}' but found '{}'"\
@@ -326,24 +326,25 @@ class Collector(NodeVistor):
         result = Counter({ k:(-counter[k]) for k in counter})
         return result
 
-
-def strip_whitespace(text):
-    """Remove all whitespace from *text*.
-    
-    See https://stackoverflow.com/a/3739939/297797
-    """
-    return ''.join(text.split())
-
 @add_logger
 def simplify(substitutions,expr):
     """Simplify the expression *expr* by using the substitution rules
     give in *substitutions.*
     """
-    for i in range(2):
-        for rule in substitutions:
-            subexpr, var = rule.split('=')
-            expr = expr.replace(strip_whitespace(var),'(' + subexpr + ')')
+    subst_expr = {}
+    for rule in substitutions:
+        subexpr, var = re.split(r'\s+=\s+',rule)
+        subst_expr[var] = subexpr
+    logger.debug('subst_expr: ' + str(subst_expr))
+    # Repeat substitutions until there is only one variable left in the
+    # expression
+    while True:
+        for var in subst_expr:
+            expr = expr.replace(var,'(' + subst_expr[var] + ')')
             logger.debug('expr: ' + expr)
+        var_counter = Counter(re.findall('[a-zA-Z]',expr))
+        if len(var_counter) <= 1:
+            break
     parser = Parser()
     expr_tree = parser.parse(expr)
     logger.debug('expr_tree: {}'.format(expr_tree))
